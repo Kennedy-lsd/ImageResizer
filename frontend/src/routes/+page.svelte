@@ -5,6 +5,7 @@
 	let width: number = 300;
 	let height: number = 300;
 	let errorMessage: string = '';
+	let originalResolution: string = '';
 
 	function handleFileUpload(event: Event): void {
 		const target = event.target as HTMLInputElement;
@@ -13,10 +14,19 @@
 			const reader = new FileReader();
 			reader.onload = () => {
 				imageUrl = reader.result as string;
+				getImageResolution(imageUrl);
 			};
 			reader.readAsDataURL(file);
 			selectedFile = file;
 		}
+	}
+
+	function getImageResolution(imageSrc: string): void {
+		const img = new Image();
+		img.onload = () => {
+			originalResolution = `${img.width}x${img.height}`;
+		};
+		img.src = imageSrc;
 	}
 
 	async function resizeImage(): Promise<void> {
@@ -57,25 +67,39 @@
 
 	{#if imageUrl}
 		<h2 class="text-info">Selected Image:</h2>
-		<img src={imageUrl} alt="Selected" class="img-fluid mb-4" />
+		<img src={imageUrl} alt="Selected" class="img-fluid mb-3" />
 
-		<div class="mb-4">
-			<label for="widthInput" class="mr-2">Width:</label>
+		<div class="text-muted mb-3">
+			<p><strong>Original Resolution:</strong> {originalResolution}</p>
+		</div>
+
+		<div class="input-group justify-content-center mb-4">
+			<div class="input-group-prepend">
+				<label for="widthInput" class="input-group-text">Width:</label>
+			</div>
 			<input
 				type="number"
 				id="widthInput"
 				bind:value={width}
-				class="form-control d-inline-block w-25"
+				class="form-control w-25"
+				aria-label="Width"
 			/>
-			<label for="heightInput" class="mr-2">Height:</label>
+
+			<div class="input-group-prepend">
+				<label for="heightInput" class="input-group-text">Height:</label>
+			</div>
 			<input
 				type="number"
 				id="heightInput"
 				bind:value={height}
-				class="form-control d-inline-block w-25"
+				class="form-control w-25"
+				aria-label="Height"
 			/>
-			<button class="btn btn-success ml-3" on:click={resizeImage}>Resize Image</button>
+			<div class="input-group-append">
+				<button class="btn btn-success" on:click={resizeImage}>Resize Image</button>
+			</div>
 		</div>
+
 		{#if errorMessage}
 			<div class="alert alert-danger">{errorMessage}</div>
 		{/if}
@@ -83,7 +107,7 @@
 
 	{#if resizedImageUrl}
 		<h2 class="text-success">Resized Image:</h2>
-		<img src={resizedImageUrl} alt="Resized" class="img-fluid mb-4" />
+		<img src={resizedImageUrl} alt="Resized" class="img-fluid mb-3" />
 
 		<a href={resizedImageUrl} download="resized_image.jpg">
 			<button class="btn btn-primary">Download Resized Image</button>
@@ -96,5 +120,10 @@
 		border: 1px solid #ccc;
 		margin-top: 10px;
 		border-radius: 5px;
+	}
+	.input-group-prepend,
+	.input-group-append {
+		display: flex;
+		align-items: center;
 	}
 </style>
