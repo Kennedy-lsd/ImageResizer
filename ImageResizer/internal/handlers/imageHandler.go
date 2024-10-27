@@ -3,6 +3,7 @@ package handlers
 import (
 	"image"
 	"image/jpeg"
+	"image/png"
 	"net/http"
 	"strconv"
 
@@ -36,6 +37,13 @@ func ResizeHandler(c echo.Context) error {
 	}
 	defer src.Close()
 
+	ext, err := utils.ValidateImageExtension(src)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+
+	src.Seek(0, 0)
+
 	img, _, err := image.Decode(src)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to decode image"})
@@ -49,19 +57,30 @@ func ResizeHandler(c echo.Context) error {
 	if aspectRatio > 1 {
 		newWidth = maxWidth
 		newHeight = int(float64(maxWidth) / aspectRatio)
-	} else {
+	} else { //Portrait
 		newHeight = maxHeight
 		newWidth = int(float64(maxHeight) * aspectRatio)
 	}
 
-	// Create a new blank image with the new size
+	// blank image with the new size
 	resizedImg := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
 
 	draw.BiLinear.Scale(resizedImg, resizedImg.Rect, img, img.Bounds(), draw.Over, nil)
 
-	c.Response().Header().Set("Content-Type", "image/jpeg")
-	if err := jpeg.Encode(c.Response().Writer, resizedImg, nil); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to encode resized image"})
+	switch ext {
+	case ".jpeg", ".jpg":
+		c.Response().Header().Set("Content-Type", "image/jpeg")
+		if err := jpeg.Encode(c.Response().Writer, resizedImg, nil); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to encode JPEG image"})
+		}
+	case ".png":
+		c.Response().Header().Set("Content-Type", "image/png")
+		if err := png.Encode(c.Response().Writer, resizedImg); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to encode PNG image"})
+		}
+	default:
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unsupported output file format"})
+
 	}
 
 	return nil
